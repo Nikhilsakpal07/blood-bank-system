@@ -3,6 +3,9 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Droplets, ArrowRight } from 'lucide-react';
 
+// --- CLOUD-READY: Global API URL ---
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 const Login = ({ onLogin }) => {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
@@ -12,7 +15,8 @@ const Login = ({ onLogin }) => {
         e.preventDefault();
         const endpoint = isLogin ? '/login' : '/register';
         try {
-            const res = await axios.post(`http://localhost:5000${endpoint}`, { email, password });
+            // --- UPDATED: Using Dynamic API URL ---
+            const res = await axios.post(`${API_BASE_URL}${endpoint}`, { email, password });
             
             // Backend should return user object containing u_id
             const userData = isLogin ? res.data.user : res.data;
@@ -25,7 +29,9 @@ const Login = ({ onLogin }) => {
                 alert("Login successful but User ID missing.");
             }
         } catch (err) {
-            alert(err.response?.data || "Authentication failed. Check your server.");
+            // Professional error handling for cloud deployment
+            const errorMsg = err.response?.data || "Connection failed. The RaktaSetu server may be booting up. Please wait 30 seconds and try again.";
+            alert(errorMsg);
         }
     };
 
@@ -35,14 +41,14 @@ const Login = ({ onLogin }) => {
             {/* --- LEFT PANEL: ANIMATED BRANDING --- */}
             <motion.div 
                 className="login-left-panel" 
-                style={{ flex: 1.2, padding: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+                style={{ flex: 1.2, padding: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
             >
                 <motion.div
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <Droplets size={60} fill="white" style={{ marginBottom: '20px' }} />
+                    <Droplets size={60} fill="white" style={{ marginBottom: '20px', color: 'white' }} />
                 </motion.div>
 
                 <AnimatePresence mode="wait">
@@ -58,8 +64,8 @@ const Login = ({ onLogin }) => {
                         </h1>
                         <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.2rem', marginTop: '15px', maxWidth: '450px' }}>
                             {isLogin 
-                                ? "Your personalized blood management ecosystem is ready. Log in to manage your private datasets." 
-                                : "Join the global network. Create an account to start managing your own blood bank inventory and donors."}
+                                ? "Your RaktaSetu dashboard is ready. Log in to manage your branch's blood supply." 
+                                : "Join the national digital bridge. Register your branch to manage inventory and AI insights."}
                         </p>
                     </motion.div>
                 </AnimatePresence>
@@ -76,7 +82,7 @@ const Login = ({ onLogin }) => {
                         {isLogin ? "Sign In" : "Create Account"}
                     </h2>
                     <p style={{ color: '#64748b', marginBottom: '30px' }}>
-                        {isLogin ? "Enter your admin credentials" : "Set up your admin account"}
+                        {isLogin ? "Enter your RaktaSetu credentials" : "Set up your branch admin account"}
                     </p>
 
                     <form onSubmit={handleSubmit}>
@@ -89,7 +95,7 @@ const Login = ({ onLogin }) => {
                                 value={email} 
                                 onChange={e => setEmail(e.target.value)} 
                                 required 
-                                style={{ width: '100%' }}
+                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                             />
                         </div>
 
@@ -102,11 +108,11 @@ const Login = ({ onLogin }) => {
                                 value={password} 
                                 onChange={e => setPassword(e.target.value)} 
                                 required 
-                                style={{ width: '100%' }}
+                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                             />
                         </div>
 
-                        <button className="btn-primary" style={{ width: '100%', height: '50px', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                        <button className="btn-primary" style={{ width: '100%', height: '50px', background: '#4f46e5', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                             {isLogin ? "Access Dashboard" : "Register Admin"} <ArrowRight size={18} />
                         </button>
                     </form>
