@@ -157,16 +157,28 @@ app.get("/analytics/donations", async (req, res) => {
 });
 
 // POST: Record a dispatch linked to user
+// POST: Record a dispatch linked to user
 app.post("/dispatch", async (req, res) => {
   try {
-    const { h_id, blood_group, units_given, receiver_name, owner_id } = req.body;
+    // CHANGE: Destructure 'userId' instead of 'owner_id' to match your Frontend
+    const { h_id, blood_group, units_given, userId } = req.body; 
+    
+    // Check if stock exists before dispatching
     const newDispatch = await pool.query(
-      "INSERT INTO Hospital_Dispatch (h_id, blood_group, units_given, receiver_name, owner_id) VALUES($1, $2, $3, $4, $5) RETURNING *",
-      [h_id, blood_group, units_given, receiver_name, owner_id]
+      "INSERT INTO Hospital_Dispatch (h_id, blood_group, units_given, owner_id) VALUES($1, $2, $3, $4) RETURNING *",
+      [h_id, blood_group, units_given, userId] // Use 'userId' here
     );
+    
+    // IMPORTANT: You should also decrease the units in Blood_Bank here!
+    await pool.query(
+      "UPDATE Blood_Bank SET total_units = total_units - $1 WHERE blood_group = $2 AND owner_id = $3",
+      [units_given, blood_group, userId]
+    );
+
     res.json(newDispatch.rows[0]);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error("Dispatch Error:", err.message);
+    res.status(400).json({ message: "Stock Update Failed: " + err.message });
   }
 });
 
@@ -214,6 +226,7 @@ app.delete('/donors/:id', async (req, res) => {
 });
 
 // Start Server
-app.listen(5000, () => {
-  console.log("Server is running on port 5000...");
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`RaktaSetu Server running on port ${PORT}`);
 });
