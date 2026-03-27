@@ -17,7 +17,7 @@ const createTables = async () => {
   } catch (err) {
     console.error("❌ Error creating tables:", err);
   }
-};
+}; 
 createTables();
 const { predictDemand } = require('./aiEngine');
 const app = express();
