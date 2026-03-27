@@ -22,7 +22,8 @@ createTables();
 const { predictDemand } = require('./aiEngine');
 const app = express();
 
-// Middleware
+// Middleware 
+const cors = require('cors');
 app.use(cors());
 app.use(express.json());
 
