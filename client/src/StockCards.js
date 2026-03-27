@@ -6,14 +6,16 @@ import { Brain } from 'lucide-react';
 const StockCards = ({ inventory, refreshTrigger }) => {
     const [aiPrediction, setAiPrediction] = useState(null);
 
+    // --- STEP 1: Define the API Base from your .env file ---
+    const API_BASE_URL = import.meta.env.VITE_API_URL;
+
     useEffect(() => {
-        // --- MULTI-TENANCY FIX: Pass userId to AI Engine ---
         const userId = localStorage.getItem('userId');
         
         if (userId) {
-            axios.get(`http://localhost:5000/api/ai/predict-demand?userId=${userId}`)
+            // --- STEP 2: Use the variable in the request template literal ---
+            axios.get(`${API_BASE_URL}/api/ai/predict-demand?userId=${userId}`)
                 .then(res => {
-                    // Handle the case where the user has < 5 dispatches
                     if (res.data.message) {
                         console.log("AI Notice:", res.data.message);
                         setAiPrediction(null);
@@ -23,7 +25,7 @@ const StockCards = ({ inventory, refreshTrigger }) => {
                 })
                 .catch(() => console.log("Synaptic engine still training for this account..."));
         }
-    }, [refreshTrigger]); 
+    }, [refreshTrigger, API_BASE_URL]); // Added API_BASE_URL to dependency array for safety
 
     return (
         <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
@@ -33,11 +35,9 @@ const StockCards = ({ inventory, refreshTrigger }) => {
                 </div>
             ) : (
                 inventory.map((item, index) => {
-                    // Ensure units is treated as a number
                     const units = Number(item.total_units || 0);
                     const isLow = units < 15;
 
-                    // Prediction check: ensure we match the correct blood group from the AI response
                     const predictionValue = aiPrediction ? aiPrediction[item.blood_group] : 0;
                     const isAiPriority = predictionValue > 0.6 && units < 40;
 

@@ -12,6 +12,9 @@ import Settings from './components/Settings';
 import Login from './Login'; 
 import './App.css';
 
+// --- STEP 1: Define the API Base from your .env file ---
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [donors, setDonors] = useState([]);
@@ -19,29 +22,28 @@ function App() {
   const [chartData, setChartData] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // AUTH STATE: Persist login and specific User ID
   const [isAuthenticated, setIsAuthenticated] = useState(
     localStorage.getItem('isAuthenticated') === 'true'
   );
 
-  // Function passed to Login.js to trigger state change
   const handleLogin = (user) => {
     setIsAuthenticated(true);
     localStorage.setItem('isAuthenticated', 'true');
-    localStorage.setItem('userId', user.u_id); // Save unique user ID
+    localStorage.setItem('userId', user.u_id); 
   };
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userId'); // Clear user ID on logout
+    localStorage.removeItem('userId'); 
     setIsAuthenticated(false);
   };
 
-  // FETCH LOGIC: Now including userId to filter database results
+  // --- STEP 2: Use API_BASE_URL in all fetch requests ---
   const getDonors = async () => {
     try {
       const userId = localStorage.getItem('userId');
-      const res = await axios.get(`http://localhost:5000/donors?userId=${userId}`);
+      // Updated URL
+      const res = await axios.get(`${API_BASE_URL}/donors?userId=${userId}`);
       setDonors(res.data);
     } catch (err) { console.error("Donor Fetch Error:", err); }
   };
@@ -49,7 +51,8 @@ function App() {
   const getInventory = async () => {
     try {
       const userId = localStorage.getItem('userId');
-      const res = await axios.get(`http://localhost:5000/inventory/summary?userId=${userId}`);
+      // Updated URL
+      const res = await axios.get(`${API_BASE_URL}/inventory/summary?userId=${userId}`);
       setInventory(res.data);
     } catch (err) { console.error("Inventory Fetch Error:", err); }
   };
@@ -57,7 +60,8 @@ function App() {
   const getAnalytics = async () => {
     try {
       const userId = localStorage.getItem('userId');
-      const res = await axios.get(`http://localhost:5000/analytics/donations?userId=${userId}`);
+      // Updated URL
+      const res = await axios.get(`${API_BASE_URL}/analytics/donations?userId=${userId}`);
       setChartData(res.data);
     } catch (err) { console.error("Analytics Error:", err); }
   };
@@ -91,7 +95,8 @@ function App() {
           {activeTab === 'Dashboard' && (
             <motion.div key="dash" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
               <header className="header-container">
-                <h1>Analytics Overview</h1>
+                {/* Updated Title for Indian Identity */}
+                <h1>RaktaSetu: Analytics Overview</h1>
                 <p>Real-time data visualization of blood bank operations.</p>
               </header>
               <StockCards inventory={inventory} refreshTrigger={refreshKey} />
@@ -104,7 +109,7 @@ function App() {
           {activeTab === 'Donors' && (
             <motion.div key="donors" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
               <header className="header-container">
-                <h1>Donor Directory</h1>
+                <h1>RaktaSetu: Donor Directory</h1>
                 <p>Register new donors and manage existing records.</p>
               </header>
               <div className="page-grid">
@@ -112,7 +117,6 @@ function App() {
                   <DonorForm refreshDonors={refreshDashboard} />
                 </div>
                 <div className="grid-item">
-                  {/* Pass donors to the list */}
                   <DonorList donors={donors} refreshDonors={refreshDashboard} />
                 </div>
               </div>
@@ -122,7 +126,7 @@ function App() {
           {activeTab === 'Inventory' && (
             <motion.div key="inv" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
               <header className="header-container">
-                <h1>Hospital Inventory</h1>
+                <h1>RaktaSetu: Inventory</h1>
                 <p>Manage blood dispatches to medical facilities.</p>
               </header>
               <div className="single-col-grid">

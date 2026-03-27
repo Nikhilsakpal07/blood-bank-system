@@ -3,6 +3,9 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { UserPlus } from 'lucide-react';
 
+// --- CLOUD-READY: Global API URL ---
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 const DonorForm = ({ refreshDonors }) => {
     const [formData, setFormData] = useState({
         name: '',
@@ -23,7 +26,6 @@ const DonorForm = ({ refreshDonors }) => {
             return;
         }
 
-        // --- NEW: MULTI-TENANCY LOGIC ---
         // Get the logged-in User's ID from localStorage
         const userId = localStorage.getItem('userId');
 
@@ -33,8 +35,8 @@ const DonorForm = ({ refreshDonors }) => {
         }
 
         try {
-            // Send formData ALONG with the owner_id to link this donor to the current user
-            const response = await axios.post("http://localhost:5000/donors", {
+            // --- UPDATED: Using Dynamic API URL and userId ---
+            const response = await axios.post(`${API_BASE_URL}/donors`, {
                 ...formData,
                 owner_id: userId 
             });
