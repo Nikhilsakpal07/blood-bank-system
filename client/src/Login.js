@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Droplets, ArrowRight } from 'lucide-react';
 
 // --- CLOUD-READY: Global API URL ---
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = "https://raktasetu-server.onrender.com";
 
 const Login = ({ onLogin }) => {
     const [isLogin, setIsLogin] = useState(true);
