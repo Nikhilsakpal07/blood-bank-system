@@ -12,47 +12,61 @@ app.use(express.json());
 // --- 2. AUTO-CREATE TABLES ON STARTUP ---
 // Using lowercase names to ensure compatibility with Render PostgreSQL
 const createTables = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255),
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        role VARCHAR(50) DEFAULT 'user'
-      );
-      
-      CREATE TABLE IF NOT EXISTS donor (
-        d_id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        age INTEGER,
-        gender VARCHAR(50),
-        blood_group VARCHAR(10),
-        contact_no VARCHAR(20),
-        major_illness TEXT,
-        medical_eligibility VARCHAR(50),
-        last_donation_date DATE,
-        owner_id INTEGER REFERENCES users(id)
-      );
+    try {
+        // 1. Create Users first (The main Owner)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL
+            );
+        `);
 
-      CREATE TABLE IF NOT EXISTS blood_bank (
-        bb_id SERIAL PRIMARY KEY,
-        blood_group VARCHAR(10),
-        total_units INTEGER DEFAULT 0,
-        owner_id INTEGER REFERENCES users(id),
-        expiry_date DATE,
-        UNIQUE(blood_group, owner_id)
-      );
-      -- Replace 'YOUR_USER_ID' with the actual ID from your localStorage
-INSERT INTO hospitals (name, address, contact_no, owner_id) 
-VALUES 
-('City General Hospital', 'Mumbai Central', '9876543210', 'YOUR_USER_ID'),
-('Apex Trauma Center', 'Navi Mumbai', '9123456789', 'YOUR_USER_ID');
-    `);
-    console.log("✅ Database tables verified/created");
-  } catch (err) {
-    console.error("❌ Error creating tables:", err);
-  }
+        // 2. Create Hospitals (Depends on users)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS hospitals (
+                h_id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                address TEXT,
+                contact_no VARCHAR(20),
+                owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+            );
+        `);
+
+        // 3. Create Donors (Depends on users)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS donors (
+                d_id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                age INTEGER,
+                gender VARCHAR(10),
+                blood_group VARCHAR(5),
+                contact_no VARCHAR(20),
+                medical_eligibility VARCHAR(10),
+                major_illness TEXT,
+                last_donation_date DATE DEFAULT CURRENT_DATE,
+                owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+            );
+        `);
+
+        // 4. Create Dispatch (Depends on hospitals AND users)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS dispatch (
+                id SERIAL PRIMARY KEY,
+                h_id INTEGER REFERENCES hospitals(h_id) ON DELETE CASCADE,
+                blood_group VARCHAR(5),
+                units_given INTEGER,
+                dispatch_date DATE DEFAULT CURRENT_DATE,
+                purpose VARCHAR(50),
+                owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+            );
+        `);
+
+        console.log("✅ All tables initialized in correct sequence!");
+    } catch (err) {
+        console.error("❌ Error creating tables:", err);
+    }
 };
 createTables();
 
@@ -77,19 +91,31 @@ app.post('/register', async (req, res) => {
         res.status(400).send("User already exists or database error");
     }
 });
-
-// server/index.js
-app.get('/hospitals', async (req, res) => {
+app.post('/hospitals', async (req, res) => {
     try {
-        const { userId } = req.query;
-        const allHospitals = await pool.query(
-            "SELECT * FROM hospitals WHERE owner_id = $1", 
-            [userId]
+        const { name, address, contact, userId } = req.body;
+        const newHosp = await pool.query(
+            "INSERT INTO hospitals (name, address, contact_no, owner_id) VALUES($1, $2, $3, $4) RETURNING *",
+            [name, address, contact, userId]
         );
-        res.json(allHospitals.rows);
+        res.json(newHosp.rows[0]);
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Server Error");
+    }
+});
+// server/index.js
+app.get('/hospitals', async (req, res) => {
+    try {
+        const { userId } = req.query; // This comes from your frontend axios call
+        const userHospitals = await pool.query(
+            "SELECT * FROM hospitals WHERE owner_id = $1", 
+            [userId]
+        );
+        res.json(userHospitals.rows);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Database Error");
     }
 });
 // Login Admin
