@@ -10,18 +10,24 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const DonorList = () => {
-    const [donors, setDonors] = useState([]);
+    // LAYER 1: Initialize as empty array so .filter() doesn't crash on load
+    const [donors, setDonors] = useState([]); 
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedDonor, setSelectedDonor] = useState(null);
-    const userId = localStorage.getItem('userId'); // Get the logged-in user's ID
+    const userId = localStorage.getItem('userId');
 
     const fetchDonors = () => {
         if (!userId) return;
         
-        // --- FIX: Use API_BASE_URL and pass userId ---
         axios.get(`${API_BASE_URL}/donors?userId=${userId}`)
-            .then(res => setDonors(res.data))
-            .catch(err => console.error("Fetch Error:", err));
+            .then(res => {
+                // Ensure we only set state if the response is actually an array
+                setDonors(Array.isArray(res.data) ? res.data : []);
+            })
+            .catch(err => {
+                console.error("Fetch Error:", err);
+                setDonors([]); // Reset to empty array on error to prevent crashes
+            });
     };
 
     useEffect(() => {
@@ -31,7 +37,6 @@ const DonorList = () => {
     const deleteDonor = async (id) => {
         if (window.confirm("Delete this donor record permanently?")) {
             try {
-                // --- FIX: Use API_BASE_URL ---
                 await axios.delete(`${API_BASE_URL}/donors/${id}`);
                 setDonors(donors.filter(donor => donor.d_id !== id));
             } catch (err) {
@@ -40,34 +45,30 @@ const DonorList = () => {
         }
     };
 
-    // --- SMART STATUS LOGIC ---
     const getDonorStatus = (donor) => {
         const expiryThreshold = parseInt(localStorage.getItem('expiryThreshold')) || 45;
-
         if (donor.last_donation_date) {
             const lastDonation = new Date(donor.last_donation_date);
             const diffDays = Math.ceil((new Date() - lastDonation) / (1000 * 60 * 60 * 24));
-            
             if (diffDays > expiryThreshold) {
                 return { label: "EXPIRED", icon: <Clock size={14} />, color: '#ef4444' };
             }
         }
-
         const rawValue = donor.major_illness ? String(donor.major_illness).toLowerCase().trim() : "";
         const healthyKeywords = ["none", "nil", "no", "n/a", "null", "[null]", "-", "", "no illness"];
-        const hasActualIllness = !healthyKeywords.includes(rawValue);
-
-        if (hasActualIllness) {
+        if (!healthyKeywords.includes(rawValue)) {
             return { label: "MEDICAL ALERT", icon: <AlertTriangle size={14} />, color: '#f59e0b' };
         }
-
         return { label: "ELIGIBLE", icon: <ShieldCheck size={14} />, color: '#22c55e' };
     };
 
-    const filteredDonors = donors.filter(d => 
-        d.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (d.blood_group && d.blood_group.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    // LAYER 2: Safety check to ensure donors is an array before filtering
+    const filteredDonors = Array.isArray(donors) 
+        ? donors.filter(d => 
+            (d.name && d.name.toLowerCase().includes(searchTerm.toLowerCase())) || 
+            (d.blood_group && d.blood_group.toLowerCase().includes(searchTerm.toLowerCase()))
+          )
+        : [];
 
     return (
         <div style={{ marginTop: '30px' }}>
@@ -97,46 +98,54 @@ const DonorList = () => {
                     </thead>
                     <tbody>
                         <AnimatePresence>
-                            {filteredDonors.map((d) => {
-                                const status = getDonorStatus(d);
-                                return (
-                                    <motion.tr 
-                                        key={d.d_id}
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        onClick={() => setSelectedDonor(d)}
-                                        style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
-                                        whileHover={{ backgroundColor: '#f8fafc' }}
-                                    >
-                                        <td style={{ padding: '15px', fontWeight: 700, color: '#1e293b' }}>{d.name}</td>
-                                        <td style={{ padding: '15px' }}>
-                                            <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '4px 10px', borderRadius: '6px', fontWeight: 800, fontSize: '0.8rem' }}>
-                                                {d.blood_group}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '15px' }}>
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 800, fontSize: '0.65rem', color: status.color }}>
-                                                {status.icon} {status.label}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '15px', textAlign: 'right' }}>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); deleteDonor(d.d_id); }}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1' }}
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </td>
-                                    </motion.tr>
-                                );
-                            })}
+                            {filteredDonors.length > 0 ? (
+                                filteredDonors.map((d) => {
+                                    const status = getDonorStatus(d);
+                                    return (
+                                        <motion.tr 
+                                            key={d.d_id}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            onClick={() => setSelectedDonor(d)}
+                                            style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
+                                            whileHover={{ backgroundColor: '#f8fafc' }}
+                                        >
+                                            <td style={{ padding: '15px', fontWeight: 700, color: '#1e293b' }}>{d.name}</td>
+                                            <td style={{ padding: '15px' }}>
+                                                <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '4px 10px', borderRadius: '6px', fontWeight: 800, fontSize: '0.8rem' }}>
+                                                    {d.blood_group}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '15px' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 800, fontSize: '0.65rem', color: status.color }}>
+                                                    {status.icon} {status.label}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '15px', textAlign: 'right' }}>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); deleteDonor(d.d_id); }}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1' }}
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </td>
+                                        </motion.tr>
+                                    );
+                                })
+                            ) : (
+                                <tr>
+                                    <td colSpan="4" style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                                        No donor records found.
+                                    </td>
+                                </tr>
+                            )}
                         </AnimatePresence>
                     </tbody>
                 </table>
             </div>
 
-            {/* Profile Detail Modal (Keep as is) */}
+            {/* Profile Detail Modal */}
             <AnimatePresence>
                 {selectedDonor && (
                     <div className="modal-overlay" onClick={() => setSelectedDonor(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>

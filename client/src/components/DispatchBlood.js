@@ -7,8 +7,11 @@ import { Send, History } from 'lucide-react';
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const DispatchBlood = ({ refreshStock }) => {
+  // LAYER 1: Initialize as empty arrays to prevent .map crashes
   const [hospitals, setHospitals] = useState([]);
   const [history, setHistory] = useState([]);
+  const userId = localStorage.getItem('userId');
+  
   const [formData, setFormData] = useState({
     h_id: '',
     blood_group: '',
@@ -20,38 +23,39 @@ const DispatchBlood = ({ refreshStock }) => {
 
   const fetchData = async () => {
     try {
-      // --- MULTI-TENANCY: Get current branch ID ---
-      const userId = localStorage.getItem('userId');
+      if (!userId) return;
       
       const [hospRes, histRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/hospitals?userId=${userId}`),
         axios.get(`${API_BASE_URL}/dispatch-history?userId=${userId}`)
       ]);
-      setHospitals(hospRes.data);
-      setHistory(histRes.data);
+      
+      // LAYER 2: Double-check that response data is actually an array
+      setHospitals(Array.isArray(hospRes.data) ? hospRes.data : []);
+      setHistory(Array.isArray(histRes.data) ? histRes.data : []);
     } catch (err) { 
       console.error("Fetch Error:", err); 
+      setHospitals([]); // Fallback to empty on error
+      setHistory([]);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+  }, [userId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const userId = localStorage.getItem('userId');
-
     try {
-      // --- UPDATED: Passing userId and using dynamic URL ---
       await axios.post(`${API_BASE_URL}/dispatch`, { 
         ...formData, 
         userId: userId 
       });
       
       alert("Dispatch Recorded Successfully!");
-      fetchData(); // Refresh history table
-      refreshStock(); // Refresh top dashboard cards
+      fetchData(); 
+      if (refreshStock) refreshStock(); 
       
-      // Reset form units but keep date
       setFormData(prev => ({ ...prev, units_given: '', blood_group: '' }));
     } catch (err) {
       alert(err.response?.data?.message || "Insufficient stock or connection error!");
@@ -61,45 +65,50 @@ const DispatchBlood = ({ refreshStock }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
       {/* --- DISPATCH FORM --- */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card" style={{ padding: '25px' }}>
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#1e293b', marginBottom: '20px' }}>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card" style={{ padding: '25px', background: 'white', borderRadius: '16px' }}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#1e293b', marginBottom: '20px', fontWeight: 800 }}>
           <Send size={20} color="#4f46e5" /> Hospital Blood Dispatch
         </h3>
         
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
             <div className="form-group">
-              <label className="form-label">Target Hospital</label>
+              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>TARGET HOSPITAL</label>
               <select 
-                className="input-field" 
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                 value={formData.h_id}
                 onChange={e => setFormData({...formData, h_id: e.target.value})} 
                 required
               >
                 <option value="">Select Hospital</option>
-                {hospitals.map(h => <option key={h.h_id} value={h.h_id}>{h.name}</option>)}
+                {/* LAYER 3: Optional chaining ensures it only maps if hospitals is an array */}
+                {hospitals?.map?.(h => (
+                  <option key={h.h_id} value={h.h_id}>{h.name}</option>
+                ))}
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Blood Group</label>
+              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>BLOOD GROUP</label>
               <select 
-                className="input-field" 
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                 value={formData.blood_group}
                 onChange={e => setFormData({...formData, blood_group: e.target.value})} 
                 required
               >
                 <option value="">Choose Group</option>
-                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
+                  <option key={bg} value={bg}>{bg}</option>
+                ))}
               </select>
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '15px' }}>
             <div className="form-group">
-              <label className="form-label">Units (Bags)</label>
+              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>UNITS (BAGS)</label>
               <input 
                 type="number" 
-                className="input-field" 
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                 placeholder="0" 
                 value={formData.units_given}
                 onChange={e => setFormData({...formData, units_given: e.target.value})} 
@@ -107,19 +116,19 @@ const DispatchBlood = ({ refreshStock }) => {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Dispatch Date</label>
+              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>DISPATCH DATE</label>
               <input 
                 type="date" 
-                className="input-field" 
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                 value={formData.dispatch_date} 
                 onChange={e => setFormData({...formData, dispatch_date: e.target.value})} 
                 required 
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Urgency/Purpose</label>
+              <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>URGENCY</label>
               <select 
-                className="input-field" 
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                 value={formData.purpose}
                 onChange={e => setFormData({...formData, purpose: e.target.value})}
               >
@@ -129,39 +138,39 @@ const DispatchBlood = ({ refreshStock }) => {
             </div>
           </div>
 
-          <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '10px' }}>
+          <button type="submit" style={{ width: '100%', height: '50px', background: '#4f46e5', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 700, cursor: 'pointer' }}>
             Confirm & Dispatch Units
           </button>
         </form>
       </motion.div>
 
       {/* --- DISPATCH HISTORY LIST --- */}
-      <motion.div className="glass-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} style={{ padding: '25px' }}>
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#1e293b', marginBottom: '20px' }}>
+      <motion.div className="glass-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} style={{ padding: '25px', background: 'white', borderRadius: '16px' }}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#1e293b', marginBottom: '20px', fontWeight: 800 }}>
           <History size={20} color="#64748b" /> Recent Dispatches
         </h3>
-        <table className="modern-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #f1f5f9' }}>
-              <th style={{ padding: '12px' }}>Hospital</th>
-              <th style={{ padding: '12px' }}>Group</th>
-              <th style={{ padding: '12px' }}>Units</th>
-              <th style={{ padding: '12px' }}>Date</th>
-              <th style={{ padding: '12px' }}>Purpose</th>
+            <tr style={{ textAlign: 'left', borderBottom: '2px solid #f1f5f9', fontSize: '0.75rem', color: '#64748b' }}>
+              <th style={{ padding: '12px' }}>HOSPITAL</th>
+              <th style={{ padding: '12px' }}>GROUP</th>
+              <th style={{ padding: '12px' }}>UNITS</th>
+              <th style={{ padding: '12px' }}>DATE</th>
+              <th style={{ padding: '12px' }}>PURPOSE</th>
             </tr>
           </thead>
           <tbody>
-            {history.length === 0 ? (
+            {history?.length === 0 ? (
                 <tr><td colSpan="5" style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>No dispatch records found.</td></tr>
             ) : (
-                history.map((item, idx) => (
+                history?.map?.((item, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '12px', fontWeight: 600 }}>{item.hospital_name}</td>
-                      <td style={{ padding: '12px' }}><span className="blood-badge">{item.blood_group}</span></td>
-                      <td style={{ padding: '12px' }}>{item.units_given} Units</td>
-                      <td style={{ padding: '12px' }}>{new Date(item.dispatch_date).toLocaleDateString()}</td>
+                      <td style={{ padding: '12px', fontWeight: 600, color: '#1e293b' }}>{item.hospital_name}</td>
+                      <td style={{ padding: '12px' }}><span style={{ background: '#fee2e2', color: '#b91c1c', padding: '4px 8px', borderRadius: '4px', fontWeight: 800 }}>{item.blood_group}</span></td>
+                      <td style={{ padding: '12px', color: '#475569' }}>{item.units_given} Units</td>
+                      <td style={{ padding: '12px', color: '#475569' }}>{new Date(item.dispatch_date).toLocaleDateString()}</td>
                       <td style={{ padding: '12px' }}>
-                        <span className={`status-badge ${item.purpose === 'Emergency' ? 'status-urgent' : 'status-stable'}`} style={{
+                        <span style={{
                              padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800,
                              background: item.purpose === 'Emergency' ? '#fee2e2' : '#dcfce7',
                              color: item.purpose === 'Emergency' ? '#ef4444' : '#22c55e'
