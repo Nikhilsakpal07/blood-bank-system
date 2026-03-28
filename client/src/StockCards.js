@@ -3,42 +3,56 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Brain } from 'lucide-react';
 
-const StockCards = ({ inventory, refreshTrigger }) => {
-    const [aiPrediction, setAiPrediction] = useState(null);
+// --- CLOUD-READY: Global API URL ---
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-    // --- STEP 1: Define the API Base from your .env file ---
-    const API_BASE_URL = import.meta.env.VITE_API_URL;
+// Added default empty array to 'inventory' to prevent undefined errors
+const StockCards = ({ inventory = [], refreshTrigger }) => {
+    const [aiPrediction, setAiPrediction] = useState(null);
 
     useEffect(() => {
         const userId = localStorage.getItem('userId');
         
         if (userId) {
-            // --- STEP 2: Use the variable in the request template literal ---
+            // Fetch AI predictions specifically for this user
             axios.get(`${API_BASE_URL}/api/ai/predict-demand?userId=${userId}`)
                 .then(res => {
+                    // Check if backend returned a message (like "Need more data")
                     if (res.data.message) {
-                        console.log("AI Notice:", res.data.message);
                         setAiPrediction(null);
                     } else {
                         setAiPrediction(res.data);
                     }
                 })
-                .catch(() => console.log("Synaptic engine still training for this account..."));
+                .catch(() => console.log("AI engine still training for this account..."));
         }
-    }, [refreshTrigger, API_BASE_URL]); // Added API_BASE_URL to dependency array for safety
+    }, [refreshTrigger, API_BASE_URL]);
+
+    // --- CRITICAL SAFETY CHECK: Prevent White Screen Crash ---
+    if (!inventory || !Array.isArray(inventory)) {
+        return (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <div className="loader"></div> {/* Add a small spinner if you have one in CSS */}
+                <p>Synchronizing Cloud Inventory...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
             {inventory.length === 0 ? (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                    No blood stock available. Register donors to initialize inventory.
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#94a3b8', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                    No blood stock detected. Register a donor to initialize your branch inventory.
                 </div>
             ) : (
-                inventory.map((item, index) => {
+                // Using Optional Chaining (?) for extra safety during mapping
+                inventory?.map((item, index) => {
                     const units = Number(item.total_units || 0);
+                    const group = item.blood_group || 'Unknown';
                     const isLow = units < 15;
 
-                    const predictionValue = aiPrediction ? aiPrediction[item.blood_group] : 0;
+                    // AI logic: High priority if prediction score is high and units are low
+                    const predictionValue = aiPrediction ? aiPrediction[group] : 0;
                     const isAiPriority = predictionValue > 0.6 && units < 40;
 
                     return (
@@ -56,7 +70,8 @@ const StockCards = ({ inventory, refreshTrigger }) => {
                                 background: isAiPriority ? 'rgba(99, 102, 241, 0.05)' : 'white',
                                 position: 'relative',
                                 overflow: 'hidden',
-                                borderRadius: '16px'
+                                borderRadius: '16px',
+                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                             }}
                         >
                             {isAiPriority && (
@@ -65,8 +80,7 @@ const StockCards = ({ inventory, refreshTrigger }) => {
                                     background: '#6366f1', color: 'white', 
                                     padding: '2px 8px', borderRadius: '10px', fontSize: '10px',
                                     display: 'flex', alignItems: 'center', gap: '4px',
-                                    fontWeight: 700,
-                                    zIndex: 1
+                                    fontWeight: 700, zIndex: 1
                                 }}>
                                     <Brain size={10} /> AI PRIORITY
                                 </div>
@@ -77,7 +91,7 @@ const StockCards = ({ inventory, refreshTrigger }) => {
                             </span>
                             
                             <h2 style={{ fontSize: '2.5rem', margin: '10px 0', color: '#1e293b', fontWeight: 800 }}>
-                                {item.blood_group}
+                                {group}
                             </h2>
                             
                             <div style={{ fontSize: '1.4rem', color: isLow ? '#ef4444' : '#4f46e5', fontWeight: 800 }}>
