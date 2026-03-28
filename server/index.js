@@ -43,6 +43,11 @@ const createTables = async () => {
         expiry_date DATE,
         UNIQUE(blood_group, owner_id)
       );
+      -- Replace 'YOUR_USER_ID' with the actual ID from your localStorage
+INSERT INTO hospitals (name, address, contact_no, owner_id) 
+VALUES 
+('City General Hospital', 'Mumbai Central', '9876543210', 'YOUR_USER_ID'),
+('Apex Trauma Center', 'Navi Mumbai', '9123456789', 'YOUR_USER_ID');
     `);
     console.log("✅ Database tables verified/created");
   } catch (err) {
@@ -73,6 +78,20 @@ app.post('/register', async (req, res) => {
     }
 });
 
+// server/index.js
+app.get('/hospitals', async (req, res) => {
+    try {
+        const { userId } = req.query;
+        const allHospitals = await pool.query(
+            "SELECT * FROM hospitals WHERE owner_id = $1", 
+            [userId]
+        );
+        res.json(allHospitals.rows);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
 // Login Admin
 app.post('/login', async (req, res) => {
     try {
