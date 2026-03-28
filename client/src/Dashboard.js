@@ -1,47 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Brain, TrendingUp, Loader2 } from 'lucide-react'; // Added Loader icon
+import { Brain, TrendingUp, Loader2, BarChart3 } from 'lucide-react';
 import StockCards from './StockCards'; 
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+// --- CLOUD-READY: Global API URL ---
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://raktasetu-server.onrender.com";
 
 const Dashboard = () => {
     const [prediction, setPrediction] = useState(null);
-    const [inventory, setInventory] = useState([]); // Initialize as empty array
-    const [loading, setLoading] = useState(true); // Track loading state
+    const [inventory, setInventory] = useState([]);
+    const [loading, setLoading] = useState(true);
     const userId = localStorage.getItem('userId');
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchDashboardData = async () => {
             if (!userId) return;
-            
             try {
-                // 1. Fetch AI Prediction
-                const predRes = await axios.get(`${API_BASE_URL}/api/ai/predict-demand?userId=${userId}`);
-                setPrediction(predRes.data);
+                // 1. Fetch Inventory & AI simultaneously
+                const [stockRes, predRes] = await Promise.all([
+                    axios.get(`${API_BASE_URL}/inventory/summary?userId=${userId}`),
+                    axios.get(`${API_BASE_URL}/api/ai/predict-demand?userId=${userId}`)
+                ]);
 
-                // 2. Fetch Inventory Stock (CRITICAL: This feeds StockCards)
-                const stockRes = await axios.get(`${API_BASE_URL}/inventory/summary?userId=${userId}`);
                 setInventory(stockRes.data);
-                
+                setPrediction(predRes.data);
                 setLoading(false);
             } catch (err) {
-                console.error("Dashboard Data Fetch Error:", err);
-                setLoading(false);
+                console.error("Dashboard Load Error:", err);
+                setLoading(false); // Stop loading even if it fails
             }
         };
 
-        fetchData();
+        fetchDashboardData();
     }, [userId]);
 
-    // --- SAFETY GUARD: Prevent White Screen while loading ---
+    // --- 1. PREVENT WHITE SCREEN: Show loader while fetching ---
     if (loading) {
         return (
-            <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <Loader2 className="animate-spin" size={40} color="#4f46e5" />
-                    <p style={{ color: '#64748b', marginTop: '10px', fontWeight: 600 }}>Syncing with RaktaSetu Cloud...</p>
-                </div>
+            <div style={{ display: 'flex', height: '80vh', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                <Loader2 className="animate-spin" size={40} color="#4f46e5" />
+                <p style={{ marginTop: '15px', color: '#64748b', fontWeight: 600 }}>Syncing RaktaSetu Cloud...</p>
             </div>
         );
     }
@@ -50,7 +48,7 @@ const Dashboard = () => {
         <div className="dashboard-container" style={{ padding: '20px' }}>
             <h2 style={{ color: '#1e293b', marginBottom: '20px', fontWeight: 800 }}>Admin Dashboard</h2>
             
-            {/* AI Insight Card */}
+            {/* AI Forecast Section */}
             <div className="glass-card ai-predict-card" 
                  style={{ 
                     marginBottom: '25px', 
@@ -71,17 +69,21 @@ const Dashboard = () => {
                     </p>
                 ) : (
                     <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '10px' }}>
-                        {prediction?.message || "Collecting branch data to train models..."}
+                        {prediction?.message || "Register more dispatches to activate AI insights."}
                     </p>
                 )}
             </div>
 
-            {/* Pass the fetched inventory to StockCards */}
-            {/* We add a secondary check here just to be 100% safe */}
-            {Array.isArray(inventory) ? (
+            {/* --- 2. PREVENT CHART CRASH: Safety Check for Inventory --- */}
+            <h3 style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '15px', fontWeight: 700 }}>LIVE INVENTORY STATUS</h3>
+            
+            {inventory && Array.isArray(inventory) ? (
                 <StockCards inventory={inventory} />
             ) : (
-                <p>Error loading inventory format.</p>
+                <div style={{ padding: '40px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                    <BarChart3 size={30} color="#cbd5e1" style={{ marginBottom: '10px' }} />
+                    <p style={{ color: '#94a3b8' }}>No data found. Add your first donor to see analytics.</p>
+                </div>
             )}
         </div>
     );
