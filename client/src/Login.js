@@ -13,24 +13,39 @@ const Login = ({ onLogin }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Ensure endpoint matches your server routes
         const endpoint = isLogin ? '/login' : '/register';
+        
         try {
-            // --- UPDATED: Using Dynamic API URL ---
-            const res = await axios.post(`${API_BASE_URL}${endpoint}`, { email, password });
+            // Construct full URL
+            const url = `${API_BASE_URL}${endpoint}`;
             
-            // Backend should return user object containing u_id
+            const res = await axios.post(url, { email, password });
+            
+            // Extract user data from response
             const userData = isLogin ? res.data.user : res.data;
             
-            if (userData && userData.u_id) {
+            /**
+             * CRITICAL FIX: 
+             * Your Postgres DB uses 'id', but your previous frontend looked for 'u_id'.
+             * We check for both to ensure compatibility.
+             */
+            const finalUserId = userData?.id || userData?.u_id;
+
+            if (userData && finalUserId) {
                 localStorage.setItem('isAuthenticated', 'true');
-                localStorage.setItem('userId', userData.u_id); 
-                onLogin(userData); // Pass user data back to App.js
+                localStorage.setItem('userId', finalUserId); 
+                
+                // Pass normalized data to App.js
+                onLogin({ ...userData, id: finalUserId }); 
             } else {
-                alert("Login successful but User ID missing.");
+                console.error("Auth Success but ID missing. Response:", res.data);
+                alert("Login successful, but User ID not found in database response.");
             }
         } catch (err) {
-            // Professional error handling for cloud deployment
-            const errorMsg = err.response?.data || "Connection failed. The RaktaSetu server may be booting up. Please wait 30 seconds and try again.";
+            // Professional error handling for VIT presentation
+            const errorMsg = err.response?.data || "Connection failed. The server might be waking up. Please retry in 20 seconds.";
             alert(errorMsg);
         }
     };
@@ -38,7 +53,7 @@ const Login = ({ onLogin }) => {
     return (
         <div className="auth-screen" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
             
-            {/* --- LEFT PANEL: ANIMATED BRANDING --- */}
+            {/* --- LEFT PANEL: BRANDING --- */}
             <motion.div 
                 className="login-left-panel" 
                 style={{ flex: 1.2, padding: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}

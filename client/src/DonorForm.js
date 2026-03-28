@@ -35,10 +35,10 @@ const DonorForm = ({ refreshDonors }) => {
         }
 
         try {
-            // --- UPDATED: Using Dynamic API URL and userId ---
-            const response = await axios.post(`${API_BASE_URL}/donors`, {
+            // --- UPDATED: Using Dynamic API URL and owner_id ---
+            await axios.post(`${API_BASE_URL}/donors`, {
                 ...formData,
-                owner_id: userId 
+                owner_id: parseInt(userId) // Ensure userId is sent as an integer
             });
             
             alert("Donor Registered Successfully!");
@@ -54,7 +54,7 @@ const DonorForm = ({ refreshDonors }) => {
         } catch (err) {
             const errorMessage = err.response?.data?.message || err.response?.data || err.message;
             if (errorMessage.toLowerCase().includes("duplicate") || errorMessage.toLowerCase().includes("already exists")) {
-                alert("Error: This contact number is already registered.");
+                alert("Error: This contact number is already registered in your branch records.");
             } else {
                 alert("Error: " + errorMessage);
             }
@@ -66,10 +66,10 @@ const DonorForm = ({ refreshDonors }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="glass-card" 
-            style={{ padding: '30px' }}
+            style={{ padding: '30px', background: 'white', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
         >
             <div style={{ marginBottom: '20px' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0, color: '#1e293b' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0, color: '#1e293b', fontWeight: 800 }}>
                     <UserPlus size={22} color="#4f46e5" /> Register New Donor
                 </h3>
             </div>
@@ -80,18 +80,18 @@ const DonorForm = ({ refreshDonors }) => {
                     {/* Row 1: Name & Age */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                         <div className="form-group">
-                            <label className="form-label">Full Name</label>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>FULL NAME</label>
                             <input 
-                                className="input-field"
+                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                                 type="text" placeholder="Full Name" required
                                 value={formData.name} 
                                 onChange={e => setFormData({...formData, name: e.target.value})} 
                             />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Age</label>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>AGE</label>
                             <input 
-                                className="input-field"
+                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                                 type="number" placeholder="Min 18" required
                                 value={formData.age} 
                                 onChange={e => setFormData({...formData, age: e.target.value})} 
@@ -102,9 +102,9 @@ const DonorForm = ({ refreshDonors }) => {
                     {/* Row 2: Gender & Blood Group */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                         <div className="form-group">
-                            <label className="form-label">Gender</label>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>GENDER</label>
                             <select 
-                                className="input-field"
+                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                                 value={formData.gender}
                                 onChange={e => setFormData({...formData, gender: e.target.value})}
                             >
@@ -114,9 +114,9 @@ const DonorForm = ({ refreshDonors }) => {
                             </select>
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Blood Group</label>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>BLOOD GROUP</label>
                             <select 
-                                className="input-field"
+                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                                 value={formData.blood_group} 
                                 onChange={e => setFormData({...formData, blood_group: e.target.value})}
                             >
@@ -128,18 +128,18 @@ const DonorForm = ({ refreshDonors }) => {
                     {/* Row 3: Contact & Medical Eligibility */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                         <div className="form-group">
-                            <label className="form-label">Contact Number</label>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>CONTACT NUMBER</label>
                             <input 
-                                className="input-field"
+                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                                 type="text" placeholder="10-digit number" required
                                 value={formData.contact_no} 
                                 onChange={e => setFormData({...formData, contact_no: e.target.value})} 
                             />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Medically Eligible?</label>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>MEDICALLY ELIGIBLE?</label>
                             <select 
-                                className="input-field"
+                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                                 value={formData.medical_eligibility}
                                 onChange={e => setFormData({...formData, medical_eligibility: e.target.value})}
                             >
@@ -151,9 +151,9 @@ const DonorForm = ({ refreshDonors }) => {
 
                     {/* Row 4: Major Illness */}
                    <div className="form-group">
-                        <label className="form-label">Major Illness</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '8px', display: 'block' }}>MAJOR ILLNESS</label>
                         <input 
-                            className="input-field"
+                            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                             type="text" 
                             placeholder="e.g. None or Diabetes"
                             value={formData.major_illness}
@@ -165,8 +165,16 @@ const DonorForm = ({ refreshDonors }) => {
                         whileHover={{ scale: 1.01, translateY: -2 }}
                         whileTap={{ scale: 0.98 }}
                         type="submit" 
-                        className="btn-primary"
-                        style={{ marginTop: '10px' }}
+                        style={{ 
+                            marginTop: '10px', 
+                            height: '50px', 
+                            background: '#4f46e5', 
+                            color: 'white', 
+                            borderRadius: '8px', 
+                            border: 'none', 
+                            fontWeight: 700, 
+                            cursor: 'pointer' 
+                        }}
                     >
                         Save Donor Record
                     </motion.button>

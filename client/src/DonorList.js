@@ -6,25 +6,33 @@ import {
     Activity, HeartPulse, ShieldCheck, AlertTriangle, Clock 
 } from 'lucide-react';
 
+// --- CLOUD-READY: Global API URL ---
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 const DonorList = () => {
     const [donors, setDonors] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedDonor, setSelectedDonor] = useState(null);
+    const userId = localStorage.getItem('userId'); // Get the logged-in user's ID
 
     const fetchDonors = () => {
-        axios.get("http://localhost:5000/donors")
+        if (!userId) return;
+        
+        // --- FIX: Use API_BASE_URL and pass userId ---
+        axios.get(`${API_BASE_URL}/donors?userId=${userId}`)
             .then(res => setDonors(res.data))
             .catch(err => console.error("Fetch Error:", err));
     };
 
     useEffect(() => {
         fetchDonors();
-    }, []);
+    }, [userId]);
 
     const deleteDonor = async (id) => {
         if (window.confirm("Delete this donor record permanently?")) {
             try {
-                await axios.delete(`http://localhost:5000/donors/${id}`);
+                // --- FIX: Use API_BASE_URL ---
+                await axios.delete(`${API_BASE_URL}/donors/${id}`);
                 setDonors(donors.filter(donor => donor.d_id !== id));
             } catch (err) {
                 console.error("Delete failed:", err.message);
@@ -32,33 +40,28 @@ const DonorList = () => {
         }
     };
 
-    // --- SMART STATUS LOGIC (CONNECTED TO SETTINGS) ---
+    // --- SMART STATUS LOGIC ---
     const getDonorStatus = (donor) => {
-        // 1. DYNAMIC EXPIRY CHECK (Reads from Settings)
         const expiryThreshold = parseInt(localStorage.getItem('expiryThreshold')) || 45;
 
         if (donor.last_donation_date) {
             const lastDonation = new Date(donor.last_donation_date);
             const diffDays = Math.ceil((new Date() - lastDonation) / (1000 * 60 * 60 * 24));
             
-            // If blood is older than the threshold set in Settings
             if (diffDays > expiryThreshold) {
-                return { label: "EXPIRED", class: "status-critical", icon: <Clock size={14} />, color: '#ef4444' };
+                return { label: "EXPIRED", icon: <Clock size={14} />, color: '#ef4444' };
             }
         }
 
-        // 2. ILLNESS LOGIC (Yellow Alert)
         const rawValue = donor.major_illness ? String(donor.major_illness).toLowerCase().trim() : "";
         const healthyKeywords = ["none", "nil", "no", "n/a", "null", "[null]", "-", "", "no illness"];
-        
         const hasActualIllness = !healthyKeywords.includes(rawValue);
 
         if (hasActualIllness) {
-            return { label: "MEDICAL ALERT", class: "status-deferred", icon: <AlertTriangle size={14} />, color: '#f59e0b' };
+            return { label: "MEDICAL ALERT", icon: <AlertTriangle size={14} />, color: '#f59e0b' };
         }
 
-        // 3. ELIGIBLE (Green)
-        return { label: "ELIGIBLE", class: "status-stable", icon: <ShieldCheck size={14} />, color: '#22c55e' };
+        return { label: "ELIGIBLE", icon: <ShieldCheck size={14} />, color: '#22c55e' };
     };
 
     const filteredDonors = donors.filter(d => 
@@ -94,7 +97,7 @@ const DonorList = () => {
                     </thead>
                     <tbody>
                         <AnimatePresence>
-                            {filteredDonors.map((d, index) => {
+                            {filteredDonors.map((d) => {
                                 const status = getDonorStatus(d);
                                 return (
                                     <motion.tr 
@@ -133,7 +136,7 @@ const DonorList = () => {
                 </table>
             </div>
 
-            {/* Profile Detail Modal */}
+            {/* Profile Detail Modal (Keep as is) */}
             <AnimatePresence>
                 {selectedDonor && (
                     <div className="modal-overlay" onClick={() => setSelectedDonor(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
