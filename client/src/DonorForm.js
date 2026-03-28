@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { UserPlus } from 'lucide-react';
 
 // --- CLOUD-READY: Global API URL ---
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = "https://raktasetu-server.onrender.com";
 
 const DonorForm = ({ refreshDonors }) => {
     const [formData, setFormData] = useState({

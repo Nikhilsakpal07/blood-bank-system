@@ -4,7 +4,7 @@ import { Brain, TrendingUp, Loader2, BarChart3 } from 'lucide-react';
 import StockCards from './StockCards'; 
 
 // --- CLOUD-READY: Global API URL ---
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://raktasetu-server.onrender.com";
+const API_BASE_URL = "https://raktasetu-server.onrender.com";
 
 const Dashboard = () => {
     const [prediction, setPrediction] = useState(null);

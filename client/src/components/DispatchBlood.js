@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Send, History } from 'lucide-react';
 
 // --- CLOUD-READY: Global API URL ---
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = "https://raktasetu-server.onrender.com";
 
 const DispatchBlood = ({ refreshStock }) => {
   // LAYER 1: Initialize as empty arrays to prevent .map crashes
