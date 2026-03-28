@@ -57,14 +57,18 @@ createTables();
 app.post('/register', async (req, res) => {
     try {
         const { email, password } = req.body;
-        // FIX: lowercase 'users'
+        // Added 'name' to the insert to prevent NOT NULL errors
+        // We'll use the email prefix as a temporary name
+        const tempName = email.split('@')[0]; 
+
         const newUser = await pool.query(
-            "INSERT INTO users (email, password) VALUES($1, $2) RETURNING *",
-            [email, password]
+            "INSERT INTO users (name, email, password) VALUES($1, $2, $3) RETURNING *",
+            [tempName, email, password]
         );
         res.json(newUser.rows[0]);
     } catch (err) {
         console.error("Register Error:", err.message);
+        // This is the error you are seeing!
         res.status(400).send("User already exists or database error");
     }
 });
